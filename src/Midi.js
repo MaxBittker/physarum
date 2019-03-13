@@ -17,11 +17,11 @@ for (var i = 0; i < 8; i++) {
 }
 nanoKONTROL
   .connect()
-  .then(function(device) {
+  .then(function (device) {
     console.log("connected!" + device.name);
     setupHandlers(device);
   })
-  .catch(function(err) {
+  .catch(function (err) {
     console.error(err);
   });
 
@@ -54,14 +54,18 @@ function setupHandlers(device) {
 function getMidiValue(n) {
   let { knob, slider, s, m, r } = data[n];
   //   console.log(knob, slider, s, m, r);
-  // knob /= 127;
+  knob /= 127;
+  knob -= 0.5;
+
+  knob /= 20;
   slider /= 127;
-  // slider -= 0.5;
+
 
   // knob = Math.pow(knob, 6) * 255;
 
   // value = knob * slider;
   value = slider;
+  value += knob
   // if (s) {
   //   value /= 10;
   // }
