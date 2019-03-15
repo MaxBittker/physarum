@@ -130,25 +130,6 @@ controls.count = ~~(size * size * 0.05);
 // animation loop
 //////////////////////////////////////
 
-function raf() {
-  requestAnimationFrame(raf);
-
-  time = (Date.now() - start) * 0.001;
-
-  trails.material.uniforms.points.value = render.texture;
-  trails.render(renderer, time);
-
-  agents.material.uniforms.data.value = trails.texture;
-  agents.render(renderer, time);
-
-  render.render(renderer, time);
-
-  postprocess_mesh.material.uniforms.data.value = trails.texture;
-  renderer.setSize(w, h);
-  renderer.clear();
-  renderer.render(scene, camera);
-}
-
 //////////////////////////////////////////////////
 
 let materials = [diffuse_decay, update_agents, render_agents];
@@ -160,34 +141,107 @@ materials.forEach(mat => {
 let start = Date.now();
 let time = 0;
 
-raf();
-
 // settings
 //////////////////////////////////////////////////
 
-import { registerMidiUpdateListener } from "./src/Midi";
+import { registerMidiUpdateListener, getMidiValue } from "./src/Midi";
+import { audioAnalyzer } from "./src/Audio";
 
 let gui = new dat.GUI();
+
+let ss = gui
+  .add(update_agents.uniforms.ss, "value", -4, 9, 0.1)
+  .name("agent speed");
+
 let values = [
   gui
     .add(diffuse_decay.uniforms.decay, "value", 0.01, 0.999, 0.01)
     .name("decay"),
-  gui.add(update_agents.uniforms.sa, "value", 1, 70, 0.1).name("sensor angle"),
+  gui.add(update_agents.uniforms.sa, "value", 1, 90, 0.1).name("sensor angle"),
   gui
-    .add(update_agents.uniforms.ra, "value", 1, 70, 0.1)
+    .add(update_agents.uniforms.ra, "value", 1, 90, 0.1)
     .name("rotation angle"),
   gui.add(update_agents.uniforms.so, "value", 1, 25, 0.1).name("sensor offset"),
-  gui.add(update_agents.uniforms.ss, "value", 0.1, 6, 0.1).name("agent speed")
+  gui.add(controls, "count", 1, size * size, 1)
 ];
 
 // gui.add(controls, "radius", 0.001, 0.25),
-//   gui.add(controls, "count", 1, size * size, 1);
 // gui.add(controls, "random");
-registerMidiUpdateListener((n, v) => {
-  if (!values[n]) {
-    return;
+registerMidiUpdateListener(
+  (n, v) => {
+    if (!values[n]) {
+      return;
+    }
+    let value = v * values[n].__max;
+    //   console.log(values[n]);
+    values[n].setValue(value);
+  },
+  bv => {
+    console.log(bv);
+    controls.addParticles({ clientX: 500, clientY: 500 });
   }
-  let value = v * values[n].__max;
-  //   console.log(values[n]);
-  values[n].setValue(value);
+);
+
+let audioBuffer = null;
+
+let audioVisualization = audio => {
+  console.log(audio);
+
+  function raf() {
+    requestAnimationFrame(raf);
+    time = (Date.now() - start) * 0.001;
+
+    if (!audioBuffer) {
+      audioBuffer = new Uint8Array(audio.frequencyBinCount);
+    }
+    audio.getByteFrequencyData(audioBuffer);
+    let bands = new Array(4);
+    var f = 0.0;
+    var a = 5,
+      b = 11,
+      c = 24,
+      d = 512,
+      i = 0;
+    for (; i < a; i++) f += audioBuffer[i];
+    f *= 0.2; // 1/(a-0)
+    f *= 0.003921569; // 1/255
+    bands[0] = f;
+    f = 0.0;
+    for (; i < b; i++) f += audioBuffer[i];
+    f *= 0.166666667; // 1/(b-a)
+    f *= 0.003921569; // 1/255
+    bands[1] = f;
+    f = 0.0;
+    for (; i < c; i++) f += audioBuffer[i];
+    f *= 0.076923077; // 1/(c-b)
+    f *= 0.003921569; // 1/255
+    bands[2] = f;
+    f = 0.0;
+    for (; i < d; i++) f += audioBuffer[i];
+    f *= 0.00204918; // 1/(d-c)
+    f *= 0.003921569; // 1/255
+    bands[3] = f;
+    let v = bands[3] * 2;
+    v = v * getMidiValue(5) + (getMidiValue(6) - 0.5);
+
+    ss.setValue(v * 8);
+
+    trails.material.uniforms.points.value = render.texture;
+    trails.render(renderer, time);
+
+    agents.material.uniforms.data.value = trails.texture;
+    agents.render(renderer, time);
+
+    render.render(renderer, time);
+
+    postprocess_mesh.material.uniforms.data.value = trails.texture;
+    renderer.setSize(w, h);
+    renderer.clear();
+    renderer.render(scene, camera);
+  }
+  raf();
+};
+
+audioAnalyzer({
+  done: audioVisualization
 });

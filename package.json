@@ -4,6 +4,7 @@
   "description": "slime mold simulation",
   "main": "index.js",
   "dependencies": {
+    "getusermedia": "^2.0.1",
     "korg-nano-kontrol": "maxbittker/korg-nano-kontrol"
   },
   "devDependencies": {

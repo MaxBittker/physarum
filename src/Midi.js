@@ -5,6 +5,7 @@ let data = {};
 let midiUpdate = (n, v) => {
   console.log("not registered" + n + v);
 }; //CB
+let buttonCb = n => {};
 
 for (var i = 0; i < 8; i++) {
   data[i] = {
@@ -17,11 +18,11 @@ for (var i = 0; i < 8; i++) {
 }
 nanoKONTROL
   .connect()
-  .then(function (device) {
+  .then(function(device) {
     console.log("connected!" + device.name);
     setupHandlers(device);
   })
-  .catch(function (err) {
+  .catch(function(err) {
     console.error(err);
   });
 
@@ -42,6 +43,7 @@ function storeButton(value) {
   let type = buttonType(this.event);
   if (value) {
     data[c][type] = !data[c][type];
+    buttonCb(c);
   }
 }
 function setupHandlers(device) {
@@ -60,12 +62,11 @@ function getMidiValue(n) {
   knob /= 20;
   slider /= 127;
 
-
   // knob = Math.pow(knob, 6) * 255;
 
   // value = knob * slider;
   value = slider;
-  value += knob
+  value += knob;
   // if (s) {
   //   value /= 10;
   // }
@@ -79,7 +80,8 @@ function getMidiValue(n) {
   return value;
 }
 
-function registerMidiUpdateListener(cb) {
+function registerMidiUpdateListener(cb, bCB) {
   midiUpdate = cb;
+  buttonCb = bCB;
 }
 module.exports = { getMidiValue, registerMidiUpdateListener };
